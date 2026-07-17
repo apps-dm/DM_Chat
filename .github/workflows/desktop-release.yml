@@ -13,7 +13,7 @@ concurrency:
   cancel-in-progress: false
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   windows:
@@ -21,7 +21,6 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     env:
-      GH_TOKEN: ${{ github.token }}
       SOURCE_TAG: ${{ inputs.source_tag }}
 
     steps:
@@ -82,7 +81,7 @@ jobs:
         working-directory: source
         run: pnpm --filter @dm-chat/desktop dist:win
 
-      - name: Installer im GitHub Release veröffentlichen
+      - name: Installer für die Veröffentlichung vorbereiten
         shell: pwsh
         run: |
           $installer = Get-ChildItem "source/apps/desktop/release/*.exe" | Select-Object -First 1
@@ -93,15 +92,10 @@ jobs:
           $asset = "DM-Chat-$env:VERSION-Windows-x64.exe"
           Copy-Item $installer.FullName $asset
 
-          gh release view $env:SOURCE_TAG --repo $env:GITHUB_REPOSITORY 2>$null
-          if ($LASTEXITCODE -ne 0) {
-            gh release create $env:SOURCE_TAG `
-              --repo $env:GITHUB_REPOSITORY `
-              --target main `
-              --title "DM Chat Desktop $env:VERSION" `
-              --notes "Offizielle DM Chat Desktop-Installer für Version $env:VERSION."
-          }
-
-          gh release upload $env:SOURCE_TAG $asset `
-            --repo $env:GITHUB_REPOSITORY `
-            --clobber
+      - name: Windows-Installer bereitstellen
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-installer
+          path: DM-Chat-*-Windows-x64.exe
+          if-no-files-found: error
+          retention-days: 1
