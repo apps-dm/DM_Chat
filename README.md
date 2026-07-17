@@ -27,10 +27,13 @@ Erstellung und Bereitstellung der offiziellen Desktop-Installer. Der
 Anwendungsquellcode, die Server-Komponenten und die Web-App werden nicht nach
 GitHub gespiegelt und verbleiben im privaten GitLab-Projekt.
 
-Der Release-Prozess baut den Windows-Installer in GitHub Actions aus einem
-explizit ausgewählten, read-only ausgecheckten GitLab-Release-Tag. Signierte
-macOS-Pakete werden vom geschützten Release-Rechner hochgeladen. In GitHub
-Releases werden ausschließlich fertige Installationsdateien veröffentlicht.
+Der lokale Release-Prozess übergibt ausschließlich den benötigten
+Desktop-Build-Kontext verschlüsselt an einen GitHub-hosted Windows-Runner. Das
+verschlüsselte Paket liegt nur in einem nicht öffentlichen Draft-Release und
+wird nach dem Build zusammen mit seinem kurzlebigen Schlüssel gelöscht.
+Signierte macOS-Pakete werden vom geschützten Release-Rechner hochgeladen. Erst
+danach wird das Release veröffentlicht – ausschließlich mit fertigen
+Installationsdateien.
 
 ## Sicherheit
 

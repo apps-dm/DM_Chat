@@ -21,6 +21,7 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     env:
+      GH_TOKEN: ${{ github.token }}
       SOURCE_TAG: ${{ inputs.source_tag }}
 
     steps:
@@ -33,24 +34,23 @@ jobs:
           fi
           echo "VERSION=${SOURCE_TAG#v}" >> "$GITHUB_ENV"
 
-      - name: SSH-Zugriff auf GitLab einrichten
+      - name: Verschlüsselten Desktop-Build-Kontext laden
         shell: bash
         env:
-          GITLAB_DEPLOY_KEY: ${{ secrets.GITLAB_DEPLOY_KEY }}
-          GITLAB_KNOWN_HOSTS: ${{ secrets.GITLAB_KNOWN_HOSTS }}
+          DESKTOP_BUILD_CONTEXT_KEY: ${{ secrets.DESKTOP_BUILD_CONTEXT_KEY }}
         run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$GITLAB_DEPLOY_KEY" > ~/.ssh/id_ed25519
-          printf '%s\n' "$GITLAB_KNOWN_HOSTS" > ~/.ssh/known_hosts
-
-      - name: Release-Quellstand aus GitLab laden
-        shell: bash
-        run: |
-          git clone \
-            --branch "$SOURCE_TAG" \
-            --depth 1 \
-            --single-branch \
-            git@gitlab.schwabe.info:dm/dm_chat.git source
+          test -n "$DESKTOP_BUILD_CONTEXT_KEY"
+          gh release download "$SOURCE_TAG" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern desktop-build-context.tar.gz.enc \
+            --dir .
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+            -in desktop-build-context.tar.gz.enc \
+            -out desktop-build-context.tar.gz \
+            -pass env:DESKTOP_BUILD_CONTEXT_KEY
+          mkdir source
+          tar -xzf desktop-build-context.tar.gz -C source
+          rm desktop-build-context.tar.gz.enc desktop-build-context.tar.gz
 
       - name: Node.js einrichten
         uses: actions/setup-node@v4
@@ -64,7 +64,7 @@ jobs:
 
       - name: Abhängigkeiten installieren
         working-directory: source
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --filter @dm-chat/desktop --frozen-lockfile
 
       - name: Desktop-Version abgleichen
         working-directory: source
