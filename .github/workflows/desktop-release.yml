@@ -52,12 +52,12 @@ jobs:
           rm desktop-build-context.tar.gz.enc desktop-build-context.tar.gz
 
       - name: Node.js einrichten
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
 
       - name: pnpm einrichten
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@008330803749db0355799c700092d9a85fd074e9 # v6.0.9
         with:
           version: 9.15.9
 
@@ -91,7 +91,7 @@ jobs:
           Copy-Item $installer.FullName $asset
 
       - name: Windows-Installer bereitstellen
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: windows-installer
           path: DM-Chat-*-Windows-x64.exe
