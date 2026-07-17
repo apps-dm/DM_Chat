@@ -21,7 +21,6 @@ jobs:
     runs-on: windows-latest
     timeout-minutes: 30
     env:
-      GH_TOKEN: ${{ github.token }}
       SOURCE_TAG: ${{ inputs.source_tag }}
 
     steps:
@@ -38,12 +37,12 @@ jobs:
         shell: bash
         env:
           DESKTOP_BUILD_CONTEXT_KEY: ${{ secrets.DESKTOP_BUILD_CONTEXT_KEY }}
+          DESKTOP_BUILD_CONTEXT_URL: ${{ secrets.DESKTOP_BUILD_CONTEXT_URL }}
         run: |
           test -n "$DESKTOP_BUILD_CONTEXT_KEY"
-          gh release download "$SOURCE_TAG" \
-            --repo "$GITHUB_REPOSITORY" \
-            --pattern desktop-build-context.tar.gz.enc \
-            --dir .
+          test -n "$DESKTOP_BUILD_CONTEXT_URL"
+          curl -fsSL "$DESKTOP_BUILD_CONTEXT_URL" \
+            -o desktop-build-context.tar.gz.enc
           openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
             -in desktop-build-context.tar.gz.enc \
             -out desktop-build-context.tar.gz \
