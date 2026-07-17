@@ -39,10 +39,9 @@ jobs:
           GITLAB_DEPLOY_KEY: ${{ secrets.GITLAB_DEPLOY_KEY }}
           GITLAB_KNOWN_HOSTS: ${{ secrets.GITLAB_KNOWN_HOSTS }}
         run: |
-          install -d -m 700 ~/.ssh
+          mkdir -p ~/.ssh
           printf '%s\n' "$GITLAB_DEPLOY_KEY" > ~/.ssh/id_ed25519
           printf '%s\n' "$GITLAB_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
 
       - name: Release-Quellstand aus GitLab laden
         shell: bash
