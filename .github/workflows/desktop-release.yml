@@ -1,0 +1,107 @@
+name: Desktop-Installer veröffentlichen
+
+on:
+  workflow_dispatch:
+    inputs:
+      source_tag:
+        description: GitLab-Release-Tag im Format vX.Y.Z
+        required: true
+        type: string
+
+concurrency:
+  group: desktop-release-${{ inputs.source_tag }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  windows:
+    name: Windows-Installer bauen
+    runs-on: windows-latest
+    timeout-minutes: 30
+    env:
+      GH_TOKEN: ${{ github.token }}
+      SOURCE_TAG: ${{ inputs.source_tag }}
+
+    steps:
+      - name: Release-Tag prüfen
+        shell: bash
+        run: |
+          if [[ ! "$SOURCE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Ungültiger Release-Tag: $SOURCE_TAG" >&2
+            exit 1
+          fi
+          echo "VERSION=${SOURCE_TAG#v}" >> "$GITHUB_ENV"
+
+      - name: SSH-Zugriff auf GitLab einrichten
+        shell: bash
+        env:
+          GITLAB_DEPLOY_KEY: ${{ secrets.GITLAB_DEPLOY_KEY }}
+          GITLAB_KNOWN_HOSTS: ${{ secrets.GITLAB_KNOWN_HOSTS }}
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$GITLAB_DEPLOY_KEY" > ~/.ssh/id_ed25519
+          printf '%s\n' "$GITLAB_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/id_ed25519 ~/.ssh/known_hosts
+
+      - name: Release-Quellstand aus GitLab laden
+        shell: bash
+        run: |
+          git clone \
+            --branch "$SOURCE_TAG" \
+            --depth 1 \
+            --single-branch \
+            git@gitlab.schwabe.info:dm/dm_chat.git source
+
+      - name: Node.js einrichten
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: pnpm einrichten
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9.15.9
+
+      - name: Abhängigkeiten installieren
+        working-directory: source
+        run: pnpm install --frozen-lockfile
+
+      - name: Desktop-Version abgleichen
+        working-directory: source
+        shell: bash
+        run: |
+          PACKAGE_VERSION="$(node -p "require('./apps/desktop/package.json').version")"
+          if [[ "$PACKAGE_VERSION" != "$VERSION" ]]; then
+            echo "Tag $SOURCE_TAG und Desktop-Version $PACKAGE_VERSION stimmen nicht überein." >&2
+            exit 1
+          fi
+
+      - name: Windows-Installer bauen
+        working-directory: source
+        run: pnpm --filter @dm-chat/desktop dist:win
+
+      - name: Installer im GitHub Release veröffentlichen
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "source/apps/desktop/release/*.exe" | Select-Object -First 1
+          if (-not $installer) {
+            throw "electron-builder hat keinen Windows-Installer erzeugt."
+          }
+
+          $asset = "DM-Chat-$env:VERSION-Windows-x64.exe"
+          Copy-Item $installer.FullName $asset
+
+          gh release view $env:SOURCE_TAG --repo $env:GITHUB_REPOSITORY 2>$null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create $env:SOURCE_TAG `
+              --repo $env:GITHUB_REPOSITORY `
+              --target main `
+              --title "DM Chat Desktop $env:VERSION" `
+              --notes "Offizielle DM Chat Desktop-Installer für Version $env:VERSION."
+          }
+
+          gh release upload $env:SOURCE_TAG $asset `
+            --repo $env:GITHUB_REPOSITORY `
+            --clobber
