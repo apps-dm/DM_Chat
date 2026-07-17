@@ -79,21 +79,28 @@ jobs:
         working-directory: source
         run: pnpm --filter @dm-chat/desktop dist:win
 
-      - name: Installer für die Veröffentlichung vorbereiten
+      - name: Windows-Updateartefakte prüfen
         shell: pwsh
         run: |
-          $installer = Get-ChildItem "source/apps/desktop/release/*.exe" | Select-Object -First 1
-          if (-not $installer) {
-            throw "electron-builder hat keinen Windows-Installer erzeugt."
+          $release = "source/apps/desktop/release"
+          $required = @(
+            "$release/DM-Chat-$env:VERSION-Windows-x64.exe",
+            "$release/DM-Chat-$env:VERSION-Windows-x64.exe.blockmap",
+            "$release/latest.yml"
+          )
+          foreach ($asset in $required) {
+            if (-not (Test-Path $asset -PathType Leaf)) {
+              throw "Erwartetes Windows-Updateartefakt fehlt: $asset"
+            }
           }
 
-          $asset = "DM-Chat-$env:VERSION-Windows-x64.exe"
-          Copy-Item $installer.FullName $asset
-
-      - name: Windows-Installer bereitstellen
+      - name: Windows-Updateartefakte bereitstellen
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: windows-installer
-          path: DM-Chat-*-Windows-x64.exe
+          name: windows-update-assets
+          path: |
+            source/apps/desktop/release/DM-Chat-*-Windows-x64.exe
+            source/apps/desktop/release/DM-Chat-*-Windows-x64.exe.blockmap
+            source/apps/desktop/release/latest.yml
           if-no-files-found: error
           retention-days: 1

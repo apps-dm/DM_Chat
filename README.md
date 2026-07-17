@@ -14,11 +14,23 @@ Alle aktuellen Installationsdateien findest du unter
 | Plattform | Datei | Hinweis |
 |---|---|---|
 | Windows (x64) | `DM-Chat-…-Windows-x64.exe` | Beim ersten Start kann Windows SmartScreen einen Hinweis anzeigen. |
-| macOS – Apple Silicon | `DM.Chat-…-arm64.dmg` | Für Macs mit M1, M2, M3 oder neuer. |
-| macOS – Intel | `DM.Chat-….dmg` | Für Macs mit Intel-Prozessor. |
+| macOS – Apple Silicon | `DM-Chat-…-macOS-arm64.dmg` | Für Macs mit Apple-Chip. |
+| macOS – Intel | `DM-Chat-…-macOS-x64.dmg` | Für Macs mit Intel-Prozessor. |
 
 Die macOS-Pakete sind mit einer Developer ID signiert und von Apple
 notarisiert.
+
+## Automatische Updates
+
+DM Chat prüft beim Start und anschließend alle 60 Minuten auf neue
+Desktop-Versionen. Wenn ein Update verfügbar ist, entscheidest du zuerst über
+den Download und nach dem Download noch einmal, ob die App sofort neu gestartet
+und aktualisiert werden soll.
+
+Die zusätzlichen YAML-, ZIP- und Blockmap-Dateien eines Releases sind signierte
+beziehungsweise prüfsummengeschützte Updateartefakte für die automatische
+Aktualisierung. Für eine manuelle Installation brauchst du weiterhin nur die
+passende `.exe`- oder `.dmg`-Datei.
 
 ## Über dieses Repository
 
@@ -33,7 +45,7 @@ verschlüsselte Paket liegt nur in einem nicht öffentlichen Draft-Release und
 wird nach dem Build zusammen mit seinem kurzlebigen Schlüssel gelöscht.
 Signierte macOS-Pakete werden vom geschützten Release-Rechner hochgeladen. Erst
 danach wird das Release veröffentlicht – ausschließlich mit fertigen
-Installationsdateien.
+Desktop-Installations- und Updateartefakten.
 
 ## Sicherheit
 
