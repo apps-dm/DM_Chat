@@ -420,7 +420,16 @@ write_tls_snippet() {
 	mkdir -p "$DEPLOY_DIR/tls"
 	case "$TLS_KIND" in
 		acme-http)   printf 'tls %s\n' "$ACME_EMAIL" > "$target" ;;
-		acme-dns)    printf 'tls {\n\tdns cloudflare {env.CLOUDFLARE_API_TOKEN}\n}\n' > "$target" ;;
+		# propagation_timeout -1 ist hier kein Feinschliff, sondern noetig:
+		# Caddy pruefe sonst ueber den Resolver des Servers, ob sein eigener
+		# TXT-Eintrag aufloesbar ist. Interne Netze haben fast immer einen
+		# cachenden Resolver, der das "gibt es nicht" des ersten Versuchs
+		# 30 Minuten lang festhaelt (SOA-Minimum der Zone) — Caddy sieht den
+		# Eintrag dann nie und dreht sich endlos im Kreis. Let's Encrypt
+		# fragt von aussen und ist davon nicht betroffen; statt der Pruefung
+		# wird eine feste Zeit abgewartet. Begruendung in
+		# deploy/tls/dns-cloudflare.caddy.example.
+		acme-dns)    printf 'tls {\n\tdns cloudflare {env.CLOUDFLARE_API_TOKEN}\n\tpropagation_delay 60s\n\tpropagation_timeout -1\n}\n' > "$target" ;;
 		own-cert)    printf 'tls /etc/caddy/tls/fullchain.pem /etc/caddy/tls/privkey.pem\n' > "$target" ;;
 		internal-ca) printf 'tls internal\n' > "$target" ;;
 		*) die "Unbekannte Zertifikatsart: $TLS_KIND" ;;
