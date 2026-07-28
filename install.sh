@@ -60,6 +60,17 @@ die()   { printf '\n%sAbbruch:%s %s\n\n' "$C_RED" "$C_RESET" "$1" >&2; exit 1; }
 # Beim Aufruf ueber `curl | bash` ist die Standardeingabe das Skript selbst —
 # ein schlichtes `read` bekaeme dessen Rest als Antwort. Alle Abfragen lesen
 # deshalb ausdruecklich vom Terminal.
+#
+# Und sie geben ihre Antwort in ANSWER zurueck statt auf der Standardausgabe.
+# Ein `x="$(ask …)"` waere lesbarer, stellt die Frage aber in einer Subshell —
+# und die darf unter `curl | sudo bash` nicht vom Terminal lesen: Ubuntu 26.04
+# bringt sudo-rs mit, und dessen `Defaults use_pty` legt fuer den Befehl ein
+# eigenes PTY an. Der geforkte Kindprozess gehoert dort anfangs nicht zur
+# Vordergrund-Prozessgruppe, faengt sich beim Lesen ein SIGTTIN ein und bleibt
+# stehen. Das Skript wartet dann bis in alle Ewigkeit auf das Ende der
+# Substitutionspipe — sichtbar als Installer, der nach der ersten Frage haengt
+# und sich nicht einmal mit Strg-C beenden laesst, weil ein gestoppter Prozess
+# kein SIGINT verarbeitet.
 # --------------------------------------------------------------------------
 
 TTY='/dev/tty'
@@ -79,7 +90,10 @@ require_tty() {
 	fi
 }
 
-ask() { # ask <Frage> <Vorgabe> -> Antwort auf stdout
+# Antwort der letzten Abfrage. Jede Abfrage setzt sie, bevor sie zurueckkehrt.
+ANSWER=''
+
+ask() { # ask <Frage> <Vorgabe> -> Antwort in ANSWER
 	local prompt="$1" default="${2:-}" answer=''
 	require_tty
 	if [ -n "$default" ]; then
@@ -88,14 +102,13 @@ ask() { # ask <Frage> <Vorgabe> -> Antwort auf stdout
 		printf '    %s ' "$prompt" >/dev/tty
 	fi
 	IFS= read -r answer <"$TTY" || answer=''
-	printf '%s' "${answer:-$default}"
+	ANSWER="${answer:-$default}"
 }
 
 ask_required() { # bricht nicht ab, sondern fragt erneut
-	local answer=''
 	while :; do
-		answer="$(ask "$1" "${2:-}")"
-		[ -n "$answer" ] && { printf '%s' "$answer"; return; }
+		ask "$1" "${2:-}"
+		[ -n "$ANSWER" ] && return
 		warn 'Bitte einen Wert eingeben.'
 	done
 }
@@ -106,7 +119,7 @@ ask_secret() { # ohne Bildschirmecho
 	printf '    %s ' "$prompt" >/dev/tty
 	IFS= read -rs answer <"$TTY" || answer=''
 	printf '\n' >/dev/tty
-	printf '%s' "$answer"
+	ANSWER="$answer"
 }
 
 confirm() { # confirm <Frage> <j|n>
@@ -275,11 +288,11 @@ choose_mode() {
                  oder aus Caddys interner CA.
 
 EOF
-	local choice; choice="$(ask 'Auswahl (1/2):' '1')"
-	case "$choice" in
+	ask 'Auswahl (1/2):' '1'
+	case "$ANSWER" in
 		1|public) MODE='public' ;;
 		2|internal) MODE='internal' ;;
-		*) die "Ungueltige Auswahl: $choice" ;;
+		*) die "Ungueltige Auswahl: $ANSWER" ;;
 	esac
 	good "Weg: $MODE"
 }
@@ -319,13 +332,13 @@ check_dns_points_here() { # nur beratend; ein Fehlschlag bricht nichts ab
 TLS_KIND=''
 collect_answers() {
 	step 'Adresse dieser Installation'
-	APP_HOST="$(ask_required 'Domain (z.B. chat.example.com):')"
+	ask_required 'Domain (z.B. chat.example.com):'; APP_HOST="$ANSWER"
 	info "Daraus ergibt sich https://$APP_HOST"
 
 	if [ "$MODE" = 'public' ]; then
 		check_dns_points_here "$APP_HOST"
 		TLS_KIND='acme-http'
-		ACME_EMAIL="$(ask_required 'E-Mail fuer Zertifikatswarnungen:')"
+		ask_required 'E-Mail fuer Zertifikatswarnungen:'; ACME_EMAIL="$ANSWER"
 		LIVEKIT_NODE_IP=''
 		LIVEKIT_USE_EXTERNAL_IP='true'
 	else
@@ -345,20 +358,22 @@ collect_answers() {
           Desktop- und die iOS-App die Verbindung.
 
 EOF
-		local choice; choice="$(ask 'Auswahl (1/2/3):' '1')"
-		case "$choice" in
+		ask 'Auswahl (1/2/3):' '1'
+		case "$ANSWER" in
 			1) TLS_KIND='acme-dns'
-			   CLOUDFLARE_API_TOKEN="$(ask_secret 'Cloudflare-API-Token (Eingabe bleibt unsichtbar):')"
+			   ask_secret 'Cloudflare-API-Token (Eingabe bleibt unsichtbar):'
+			   CLOUDFLARE_API_TOKEN="$ANSWER"
 			   [ -n "$CLOUDFLARE_API_TOKEN" ] || die 'Ohne Token kann die DNS-Challenge nicht laufen.' ;;
 			2) TLS_KIND='own-cert' ;;
 			3) TLS_KIND='internal-ca'
 			   warn 'Das Wurzelzertifikat muss danach auf alle Geraete verteilt werden.' ;;
-			*) die "Ungueltige Auswahl: $choice" ;;
+			*) die "Ungueltige Auswahl: $ANSWER" ;;
 		esac
 
 		step 'Medienadresse'
 		info 'Diese IP sagt der SFU den Clients fuer Voice und Screenshare an.'
-		LIVEKIT_NODE_IP="$(ask_required 'LAN-IP dieses Servers:' "$(guess_lan_ip)")"
+		ask_required 'LAN-IP dieses Servers:' "$(guess_lan_ip)"
+		LIVEKIT_NODE_IP="$ANSWER"
 		LIVEKIT_USE_EXTERNAL_IP='false'
 	fi
 
@@ -367,10 +382,10 @@ EOF
 	PASSWORD_RESET_ENABLED='false'
 	EMAIL_FROM="DM Chat <noreply@$APP_HOST>"
 	if confirm 'Passwort-Reset per E-Mail einrichten (braucht einen Resend-Key)?' n; then
-		RESEND_API_KEY="$(ask_secret 'Resend-API-Key:')"
+		ask_secret 'Resend-API-Key:'; RESEND_API_KEY="$ANSWER"
 		if [ -n "$RESEND_API_KEY" ]; then
 			PASSWORD_RESET_ENABLED='true'
-			EMAIL_FROM="$(ask 'Absender:' "$EMAIL_FROM")"
+			ask 'Absender:' "$EMAIL_FROM"; EMAIL_FROM="$ANSWER"
 		else
 			warn 'Kein Key eingegeben — Passwort-Reset bleibt aus.'
 		fi
@@ -564,7 +579,8 @@ bootstrap_admin() {
 EOF
 	pause_for_enter 'Danach hier die Eingabetaste druecken … '
 	local email
-	email="$(ask 'E-Mail des gerade angelegten Kontos (leer = spaeter):' '')"
+	ask 'E-Mail des gerade angelegten Kontos (leer = spaeter):' ''
+	email="$ANSWER"
 	if [ -z "$email" ]; then
 		warn 'Uebersprungen. Nachtraeglich:'
 		info "cd $DEPLOY_DIR && docker compose exec app node dist/scripts/promote-platform-admin.js <email> --confirm"
