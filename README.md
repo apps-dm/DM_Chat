@@ -18,6 +18,8 @@ Alle aktuellen Installationsdateien findest du unter
 
 Neue macOS-Releases unterstützen ausschließlich Apple Silicon. Frühere Intel-Versionen bleiben in den [älteren Releases](https://github.com/apps-dm/DM_Chat/releases) verfügbar.
 
+Version 0.12.2 verbessert die Fernsteuerung: lokaler Mauszeiger, optimierte Eingabeverarbeitung und eine Antwortzeit-Anzeige.
+
 Version 0.12.1 behebt die unvollständige Windows-ARM64-Installation aus 0.12.0. Falls die bisherige Installation nicht startet, bitte das neue ARM64-Setup manuell installieren.
 
 Die macOS-Pakete sind mit einer Developer ID signiert und von Apple
