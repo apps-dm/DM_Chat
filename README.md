@@ -1,7 +1,6 @@
 # DM Chat Desktop
 
 [![Neueste Version](https://img.shields.io/github/v/release/apps-dm/DM_Chat?display_name=tag&label=Version)](https://github.com/apps-dm/DM_Chat/releases/latest)
-[![Desktop-Release](https://github.com/apps-dm/DM_Chat/actions/workflows/desktop-release.yml/badge.svg)](https://github.com/apps-dm/DM_Chat/actions/workflows/desktop-release.yml)
 
 Die offizielle Desktop-App für **DM Chat** – schnell, fokussiert und als native
 Installation für Windows und macOS verfügbar.
@@ -15,7 +14,11 @@ Alle aktuellen Installationsdateien findest du unter
 |---|---|---|
 | Windows (x64) | `DM-Chat-…-Windows-x64.exe` | Beim ersten Start kann Windows SmartScreen einen Hinweis anzeigen. |
 | macOS – Apple Silicon | `DM-Chat-…-macOS-arm64.dmg` | Für Macs mit Apple-Chip. |
-| macOS – Intel | `DM-Chat-…-macOS-x64.dmg` | Für Macs mit Intel-Prozessor. |
+| Windows (ARM64) | `DM-Chat-…-Windows-arm64.exe` | Für Windows auf ARM. |
+
+Neue macOS-Releases unterstützen ausschließlich Apple Silicon. Frühere Intel-Versionen bleiben in den [älteren Releases](https://github.com/apps-dm/DM_Chat/releases) verfügbar.
+
+Version 0.12.1 behebt die unvollständige Windows-ARM64-Installation aus 0.12.0. Falls die bisherige Installation nicht startet, bitte das neue ARM64-Setup manuell installieren.
 
 Die macOS-Pakete sind mit einer Developer ID signiert und von Apple
 notarisiert.
@@ -39,13 +42,10 @@ Erstellung und Bereitstellung der offiziellen Desktop-Installer. Der
 Anwendungsquellcode, die Server-Komponenten und die Web-App werden nicht nach
 GitHub gespiegelt und verbleiben im privaten GitLab-Projekt.
 
-Der lokale Release-Prozess übergibt ausschließlich den benötigten
-Desktop-Build-Kontext verschlüsselt an einen GitHub-hosted Windows-Runner. Das
-verschlüsselte Paket liegt nur in einem nicht öffentlichen Draft-Release und
-wird nach dem Build zusammen mit seinem kurzlebigen Schlüssel gelöscht.
-Signierte macOS-Pakete werden vom geschützten Release-Rechner hochgeladen. Erst
-danach wird das Release veröffentlicht – ausschließlich mit fertigen
-Desktop-Installations- und Updateartefakten.
+Windows-Installer werden im privaten GitLab aus lokal vorbereiteten Apps gebaut.
+Signierte und notarisierte macOS-Pakete entstehen auf dem geschützten
+Release-Rechner. GitHub erhält ausschließlich fertige Desktop-Installations-
+und Updateartefakte.
 
 ## Sicherheit
 
