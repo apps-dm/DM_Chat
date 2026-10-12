@@ -15,9 +15,9 @@
 # Ein zweiter Aufruf aktualisiert eine bestehende Installation, statt sie zu
 # ueberschreiben.
 #
-# Die hybride Produktivarchitektur (Pangolin-Edge plus getrennter LiveKit) ist
+# Die Produktivarchitektur auf Hetzner (Pangolin-Edge, getrennter LiveKit) ist
 # hier bewusst nicht abgebildet — sie ist ein Sonderfall und bleibt
-# handgefuehrt, siehe docs/operations/production-hybrid.md.
+# handgefuehrt, siehe docs/operations/production-hetzner.md.
 
 set -euo pipefail
 
